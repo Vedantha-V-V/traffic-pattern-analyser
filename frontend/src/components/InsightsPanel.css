@@ -1,6 +1,6 @@
 .insights-panel {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
 }
 
@@ -40,14 +40,14 @@
 .anomalies-tableWrap {
   border: 1px solid var(--border);
   border-radius: 12px;
-  overflow: auto;
-  max-height: 260px;
+  overflow: hidden;
 }
 
 .anomalies-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 520px;
+  min-width: 0;
+  table-layout: fixed;
 }
 
 .anomalies-table thead th {
@@ -66,6 +66,7 @@
   padding: 10px 12px;
   font-size: 13px;
   color: var(--text);
+  word-break: break-word;
 }
 
 .anomalies-table tbody tr:hover td {
@@ -74,7 +75,7 @@
 
 .anomalies-table__timestamp,
 .anomalies-table__location {
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .anomalies-table__empty {
@@ -118,9 +119,6 @@
   font-size: 13px;
   color: var(--text);
   line-height: 1.55;
-  max-height: 220px;
-  overflow: auto;
-  padding-right: 4px;
 }
 
 .recommendations-list {
@@ -130,9 +128,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  max-height: 220px;
-  overflow: auto;
-  padding-right: 4px;
 }
 
 .recommendations-list__item {
@@ -151,8 +146,12 @@
 }
 
 @media (max-width: 980px) {
+  .insights-panel {
+    grid-template-columns: 1fr;
+  }
+  
   .anomalies-table {
-    min-width: 440px;
+    min-width: 0;
   }
 }
 

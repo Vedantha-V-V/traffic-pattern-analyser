@@ -54,9 +54,9 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     # Sort by timestamp and location
     cleaned_df = cleaned_df.sort_values(['location_id', 'timestamp'])
     
-    # Handle missing values
-    cleaned_df['vehicle_count'] = cleaned_df.groupby('location_id')['vehicle_count'].fillna(method='ffill')
-    cleaned_df['avg_speed_kmh'] = cleaned_df.groupby('location_id')['avg_speed_kmh'].fillna(method='ffill')
+    # Handle missing values (pandas 3.x: use transform + ffill instead of GroupBy.fillna)
+    cleaned_df['vehicle_count'] = cleaned_df.groupby('location_id')['vehicle_count'].transform(lambda s: s.ffill())
+    cleaned_df['avg_speed_kmh'] = cleaned_df.groupby('location_id')['avg_speed_kmh'].transform(lambda s: s.ffill())
     
     # Fill any remaining NaNs with location median
     for col in ['vehicle_count', 'avg_speed_kmh']:

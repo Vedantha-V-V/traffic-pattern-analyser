@@ -9,13 +9,24 @@ TIMEOUT = 45
 MAX_RETRIES = 2
 RETRY_DELAY = 5
 
+def _base_langflow_url() -> str:
+    """
+    Derive a base LangFlow host URL for health checks.
+    Examples:
+      - http://localhost:7860/api/v1/run/flow_id -> http://localhost:7860
+      - http://localhost:7860/api/v1/run        -> http://localhost:7860
+    """
+    if "/api/" in LANGFLOW_API_URL:
+        return LANGFLOW_API_URL.split("/api/")[0]
+    return LANGFLOW_API_URL.rstrip("/")
+
 def check_langflow_health() -> str:
     """Check if LangFlow API is accessible"""
     if USE_MOCK_LANGFLOW:
         return "mock_mode"
     
     try:
-        response = requests.get(f"{LANGFLOW_API_URL}/health", timeout=5)
+        response = requests.get(f"{_base_langflow_url()}/health", timeout=5)
         if response.status_code == 200:
             return "healthy"
         return f"unhealthy (status: {response.status_code})"

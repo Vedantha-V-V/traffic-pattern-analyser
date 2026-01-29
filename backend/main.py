@@ -1,15 +1,20 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.encoders import jsonable_encoder
 import pandas as pd
 import io
 import os
+import logging
 from dotenv import load_dotenv
 
 from preprocessing import validate_csv, clean_data, calculate_baselines, prepare_langflow_payload
 from langflow_client import send_to_langflow, check_langflow_health
 
 load_dotenv()
+
+logger = logging.getLogger("traffic_pattern_detective")
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Traffic Pattern Detective API", version="1.0.0")
 
@@ -45,21 +50,39 @@ async def analyze_traffic(file: UploadFile = File(...)):
     try:
         # Read CSV file
         contents = await file.read()
-        df = pd.read_csv(io.StringIO(contents.decode('utf-8')))
+
+        # Decode bytes safely (handles UTF-8 BOM and falls back for non-UTF8 CSVs)
+        try:
+            text = contents.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = contents.decode("latin-1")
+
+        df = pd.read_csv(io.StringIO(text))
         
         # Validate CSV format
         validation_result = validate_csv(df)
         if not validation_result["valid"]:
-            raise HTTPException(
+            return JSONResponse(
                 status_code=400,
-                detail={
-                    "error": "Invalid CSV format",
-                    "details": validation_result["errors"]
-                }
+                content=jsonable_encoder(
+                    {
+                        "success": False,
+                        "error": "Invalid CSV format",
+                        "details": validation_result["errors"],
+                    }
+                ),
             )
         
         # Clean data
         cleaned_df = clean_data(df)
+
+        # Prepare JSON-safe hourly data for the frontend
+        cleaned_for_json = cleaned_df.copy()
+        if 'timestamp' in cleaned_for_json.columns:
+            cleaned_for_json['timestamp'] = cleaned_for_json['timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        if 'date' in cleaned_for_json.columns:
+            cleaned_for_json['date'] = cleaned_for_json['date'].astype(str)
+        hourly_records = cleaned_for_json.to_dict(orient='records')
         
         # Calculate baselines
         baselines = calculate_baselines(cleaned_df)
@@ -69,6 +92,21 @@ async def analyze_traffic(file: UploadFile = File(...)):
         
         # Send to LangFlow agents
         langflow_response = send_to_langflow(langflow_payload)
+
+        # Normalize LangFlow response shape for frontend consumption
+        langflow_analysis = {}
+        if isinstance(langflow_response, dict) and 'agent_results' in langflow_response:
+            agent_results = langflow_response.get('agent_results', {}) or {}
+            anomaly_detection = agent_results.get('anomaly_detection', {}) or {}
+            insights_generation = agent_results.get('insights_generation', {}) or {}
+            langflow_analysis = {
+                "anomalies": anomaly_detection.get("anomalies", []) or [],
+                "insights": insights_generation.get("summary", "") or "",
+                "recommendations": insights_generation.get("recommendations", []) or []
+            }
+        else:
+            # If LangFlow already returns the expected shape, pass-through
+            langflow_analysis = langflow_response
         
         # Prepare response
         response_data = {
@@ -80,28 +118,42 @@ async def analyze_traffic(file: UploadFile = File(...)):
                     "start": cleaned_df['timestamp'].min().isoformat(),
                     "end": cleaned_df['timestamp'].max().isoformat()
                 },
-                "hourly_data": cleaned_df.to_dict(orient='records')
+                "raw_data": hourly_records,
+                "hourly_data": hourly_records
             },
             "baselines": baselines,
-            "langflow_analysis": langflow_response
+            "langflow_analysis": langflow_analysis
         }
         
-        return JSONResponse(content=response_data)
+        return JSONResponse(content=jsonable_encoder(response_data))
         
     except pd.errors.EmptyDataError:
-        raise HTTPException(
+        return JSONResponse(
             status_code=400,
-            detail={"error": "Empty CSV file", "details": "The uploaded file contains no data"}
+            content={
+                "success": False,
+                "error": "Empty CSV file",
+                "details": "The uploaded file contains no data",
+            },
         )
     except pd.errors.ParserError as e:
-        raise HTTPException(
+        return JSONResponse(
             status_code=400,
-            detail={"error": "CSV parsing error", "details": str(e)}
+            content={
+                "success": False,
+                "error": "CSV parsing error",
+                "details": str(e),
+            },
         )
     except Exception as e:
-        raise HTTPException(
+        logger.exception("Unhandled error in /analyze")
+        return JSONResponse(
             status_code=500,
-            detail={"error": "Internal server error", "details": str(e)}
+            content={
+                "success": False,
+                "error": "Internal server error",
+                "details": str(e),
+            },
         )
 
 @app.get("/")
