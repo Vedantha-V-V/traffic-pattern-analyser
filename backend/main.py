@@ -8,10 +8,16 @@ import os
 import logging
 from dotenv import load_dotenv
 
+# Load env BEFORE importing modules that read env vars at import-time (e.g. langflow_client.py)
+_ENV_PATH = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=_ENV_PATH, override=True)
+
 from preprocessing import validate_csv, clean_data, calculate_baselines, prepare_langflow_payload
 from langflow_client import send_to_langflow, check_langflow_health
 
-load_dotenv()
+print("[ENV] USE_MOCK_LANGFLOW =", os.getenv("USE_MOCK_LANGFLOW"))
+print("[ENV] LANGFLOW_API_URL  =", os.getenv("LANGFLOW_API_URL"))
+print("[ENV] LANGFLOW_API_KEY  =", (os.getenv("LANGFLOW_API_KEY") or "")[:8] + "..." if os.getenv("LANGFLOW_API_KEY") else "")
 
 logger = logging.getLogger("traffic_pattern_detective")
 logging.basicConfig(level=logging.INFO)

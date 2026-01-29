@@ -11,6 +11,70 @@ function normalizeSeverity(v) {
   return 'low'
 }
 
+function formatSummary(text) {
+  if (!text || typeof text !== 'string') return text
+
+  // Split by major sections using **Section:**
+  const parts = []
+  let currentText = text
+
+  // Parse Risk Level
+  const riskMatch = currentText.match(/\*\*Risk Level:\*\*\s*([^*]+)/)
+  if (riskMatch) {
+    parts.push(
+      <div key="risk-level" className="summary-section">
+        <div className="summary-label">Risk Level</div>
+        <div className="summary-value">{riskMatch[1].trim()}</div>
+      </div>
+    )
+  }
+
+  // Parse Key Concerns
+  const concernsMatch = currentText.match(/\*\*Key Concerns:\*\*\s*([^*]+?)(?=\*\*|$)/s)
+  if (concernsMatch) {
+    parts.push(
+      <div key="key-concerns" className="summary-section">
+        <div className="summary-label">Key Concerns</div>
+        <div className="summary-content">{concernsMatch[1].trim()}</div>
+      </div>
+    )
+  }
+
+  // Parse Recommended Actions
+  const actionsMatch = currentText.match(/\*\*Recommended Actions:\*\*\s*(.+)/s)
+  if (actionsMatch) {
+    const actionsText = actionsMatch[1]
+    const actionItems = []
+    
+    // Split by **Item:** pattern
+    const itemMatches = actionsText.matchAll(/\*\*([^*]+?):\*\*\s*([^*]+?)(?=\s*-\s*\*\*|$)/gs)
+    for (const match of itemMatches) {
+      actionItems.push(
+        <div key={`action-${actionItems.length}`} className="summary-action-item">
+          <div className="summary-action-title">{match[1].trim()}</div>
+          <div className="summary-action-desc">{match[2].trim()}</div>
+        </div>
+      )
+    }
+
+    if (actionItems.length > 0) {
+      parts.push(
+        <div key="recommended-actions" className="summary-section">
+          <div className="summary-label">Recommended Actions</div>
+          <div className="summary-actions">{actionItems}</div>
+        </div>
+      )
+    }
+  }
+
+  // If no structured parts found, return original text
+  if (parts.length === 0) {
+    return text
+  }
+
+  return <div className="summary-formatted">{parts}</div>
+}
+
 export function InsightsPanel({ anomalies, insights, recommendations }) {
   const list = Array.isArray(anomalies) ? anomalies : []
   const recs = Array.isArray(recommendations) ? recommendations : []
@@ -67,7 +131,7 @@ export function InsightsPanel({ anomalies, insights, recommendations }) {
       <div className="insights-panel__section summary-card">
         <div className="insights-panel__title">Summary</div>
         <div className="summary-text">
-          {insights ? insights : 'No summary returned by LangFlow.'}
+          {insights ? formatSummary(insights) : 'No summary returned by LangFlow.'}
         </div>
       </div>
 

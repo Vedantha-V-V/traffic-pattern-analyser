@@ -129,7 +129,7 @@ export function TrafficChart({ data }) {
     <div className="chart-container">
       <div className="chart-titleRow">
         <div className="chart-title">Traffic Volume Over Time</div>
-        <div className="chart-subtitle">Vehicle count by location (red points indicate anomalies)</div>
+        {/* <div className="chart-subtitle">Vehicle count by location (red points indicate anomalies)</div> */}
       </div>
       <div className="chart-wrapper">
         <Line data={chartData} options={options} />
