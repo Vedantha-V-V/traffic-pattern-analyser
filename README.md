@@ -1,4 +1,4 @@
-# Traffic Pattern Detective
+# Traffic Pattern Analyser
 
 A full-stack application for analyzing traffic patterns, detecting anomalies, and generating AI-powered insights. Upload traffic data CSVs to visualize trends, identify congestion patterns, and receive actionable recommendations.
 
