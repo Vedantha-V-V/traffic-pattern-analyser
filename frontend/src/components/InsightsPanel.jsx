@@ -1,4 +1,5 @@
 import './InsightsPanel.css'
+import { formatTimestamp } from '../utils/formatTimestamp'
 
 function safeString(v) {
   return typeof v === 'string' ? v : ''
@@ -106,7 +107,7 @@ export function InsightsPanel({ anomalies, insights, recommendations }) {
                   const sev = normalizeSeverity(a?.severity)
                   return (
                     <tr key={`${String(ts)}-${String(loc)}-${idx}`}>
-                      <td className="anomalies-table__timestamp">{String(ts)}</td>
+                      <td className="anomalies-table__timestamp">{formatTimestamp(ts)}</td>
                       <td className="anomalies-table__location">{String(loc)}</td>
                       <td>
                         <span className={`severity-badge severity-badge--${sev}`}>

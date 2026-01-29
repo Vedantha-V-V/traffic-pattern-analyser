@@ -10,6 +10,7 @@ import {
   Tooltip,
   Legend,
 } from 'chart.js'
+import { formatTimestamp } from '../utils/formatTimestamp'
 import './TrafficChart.css'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend)
@@ -107,12 +108,26 @@ export function TrafficChart({ data }) {
               const anomaly = ctx?.raw?.isAnomaly ? ' (anomaly)' : ''
               return `${ctx.dataset.label}: ${y ?? '—'}${anomaly}`
             },
+            title: (items) => {
+              if (items.length > 0) {
+                const timestamp = items[0].label
+                return formatTimestamp(timestamp)
+              }
+              return ''
+            },
           },
         },
       },
       scales: {
         x: {
-          ticks: { maxRotation: 0, autoSkip: true, color: '#64748b' },
+          ticks: { 
+            maxRotation: 0, 
+            autoSkip: true, 
+            color: '#64748b',
+            callback: function(value) {
+              return formatTimestamp(value)
+            }
+          },
           grid: { color: 'rgba(148,163,184,0.18)' },
         },
         y: {
